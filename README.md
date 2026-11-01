@@ -13,7 +13,7 @@ Independent analytical work sample using Grade 6 i-Ready reading assessment and 
 
 R, tidyverse, DuckDB/DBI, Tableau, and YAML configuration.
 
-## Project files
+## Project files - Please look inside "code" folder first.
 
 | File | Role |
 |---|---|
