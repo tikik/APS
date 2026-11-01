@@ -1,6 +1,6 @@
 # APS Grade 6 Reading Achievement & Equity Analysis
 
-Independent analytical work sample using Grade 6 i-Ready reading assessment and demographic data from academic years 2022–23 and 2023–24. **Not an official APS report.**
+Work sample using Grade 6 i-Ready reading assessment and demographic data from academic years 2022–23 and 2023–24. **Not an official APS report.**
 
 ## Purpose
 
