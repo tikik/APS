@@ -1,0 +1,35 @@
+# APS Grade 6 Reading Analytics - project configuration
+project:
+  name: "APS Grade 6 Reading Analytics"
+  root: "."
+
+paths:
+  input_assessments: "iReady.csv"
+  input_demographics: "demographic.csv"
+  merged: "01_aps_clean.csv"
+  output: "output"
+  scripts: "." # Change to "R" if scripts are stored under R/
+
+analysis:
+  grade: 6
+  historical_year: "2022-2023"
+  forecast_year: "2023-2024"
+  benchmark: "Mid or Above Grade Level"
+  near_benchmark: "Early On Grade Level"
+
+privacy:
+  small_cell_review_threshold: 20 # Review flag only; NOT an APS-approved suppression rule
+
+pipeline:
+  # Existing names; edit to match files exactly.
+  scripts:
+    - "01_equity_clean.R"
+    - "02_iready_clean.R"
+    - "03_merge_data.R"
+    - "04_descriptive_stats.R"
+    - "05_grade6_forecast.R"
+    - "06_logistic_regression.R"
+    - "07_statistical_validation.R"  # Optional if not created yet
+    - "08_grade6_equity_opportunities.R"
+  optional_scripts:
+    - "07_statistical_validation.R"

@@ -1,0 +1,113 @@
+\documentclass[11pt]{article}
+\usepackage[margin=0.85in]{geometry}
+\usepackage{booktabs,longtable,array}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{hyperref}
+\hypersetup{hidelinks}
+\title{APS Grade 6 Reading Analytics\\Data Decision and Reconciliation Log}
+\author{Independent analytical work sample}
+\date{October 2026}
+
+\begin{document}
+\SweaveOpts{concordance=TRUE}
+\maketitle
+\noindent\textbf{Scope:} Academic years 2022--23 and 2023--24, observed assessments through Winter 2023--24.\\
+\textbf{Status:} Working audit document; not an official or district-certified report.
+
+<<setup, echo=FALSE, results=hide>>=
+options(stringsAsFactors = FALSE, width = 100)
+# Compile this file with the APS project as the working directory.
+output_dir <- "output"
+read_result <- function(filename) {
+  path <- file.path(output_dir, filename)
+  if (!file.exists(path)) return(NULL)
+  readr::read_csv(path, show_col_types = FALSE)
+}
+district <- read_result("Grade6_District.csv")
+schools <- read_result("Grade6_Schools.csv")
+forecast <- read_result("Grade6_Forecast.csv")
+school_forecast <- read_result("Grade6_School_Forecast.csv")
+school_population <- read_result("Grade6_School_Population.csv")
+near <- read_result("Grade6_Near_Benchmark.csv")
+format_pct <- function(x) ifelse(is.na(x), "NA", sprintf("%.1f\\%%", x))
+@
+
+\section{Purpose and evidence standard}
+This log records analytical rules, supporting reconciliation, known limitations, and decisions requiring further verification. An automated check passing demonstrates only that the specific condition tested holds; it does not establish source-record accuracy or predictive validity.
+
+\section{Demographic profile reconciliation (D01)}
+The source demographic table contained 49,132 records. The pipeline reported 19,831 unique student--year--grade profiles and 29,301 excess rows. A reported duplicate audit identified 18,245 repeated groups. The working rule retains one record per Student ID, Academic Year, and Student Grade for joining to assessments. Initial school/race consistency checks are not sufficient to certify demographic equivalence: ethnicity, enrollment, English Language Learner status, and missing/nonmissing field conflicts need further review.
+
+\textbf{Decision status:} Deduplication implemented; detailed field-conflict audit pending. Retain the untouched original source for traceability.
+
+\section{Assessment record reconciliation (D02--D03)}
+The assessment source contained 49,132 records, resolving to 46,135 unique student--year--grade--window groups. Among these, 2,838 groups contained multiple records, accounting for 2,997 additional rows; 2,497 distinct students were reportedly affected. The project notes report a median within-window scale-score discrepancy of 20 points and 399 repeated groups with differences of at least 50 points; those last two claims require their supporting audit output before being represented as independently verified.
+
+\textbf{Provisional rule:} Retain one selected assessment per student--year--grade--window for analysis. This prevents repeated records from overweighting outcomes but does not establish which attempt is authoritative. A sensitivity comparison of alternative selection rules should be completed and recorded if not already available.
+
+\section{Join validation (D04)}
+The latest pipeline reported 46,135 selected assessment records and 46,135 merged assessment records, with zero unmatched assessments. This establishes join coverage, not correctness of every attached demographic attribute. Validate the join key's uniqueness on both sides and inspect conflicting demographic profiles.
+
+\section{Achievement definition and subgroup reporting (D05--D06)}
+\textbf{Outcome:} Mid/Above indicator equals 1 if Overall Relative Placement is ``Mid or Above Grade Level'', 0 for other valid placement categories, including ``Early On Grade Level'', and missing when placement is unavailable. Rates must use valid-placement denominators.
+
+\textbf{Mutually exclusive equity classification used in the code:} Hispanic/Latino regardless of Race; Black non-Hispanic if Hispanic indicator is N and Race is Black or African American; Other non-Hispanic; Unknown. This is distinct from overlapping race/ethnicity reporting; the current scripts do \emph{not} assign a person to both Hispanic/Latino and Black non-Hispanic groups. Blank Race associated with Hispanic ethnicity is not automatically unclassified ethnicity.
+
+\section{Observed achievement and current forecast (D07--D09)}
+<<district-table, echo=FALSE, results=tex>>=
+if (!is.null(district)) {
+  keep <- intersect(c("Academic Year", "Norming Window", "Students", "Mid_Above_Count", "Valid_Placements", "Mid_Above_Pct"), names(district))
+  tab <- district[,keep,drop=FALSE]
+  names(tab) <- c("Year", "Window", "Assessed", "Mid/Above", "Valid", "Rate (%)")[seq_along(keep)]
+  print(xtable::xtable(tab, caption="Observed district achievement from File 04"), include.rownames=FALSE, floating=FALSE)
+} else cat("\\noindent District CSV unavailable at compilation.\\par\n")
+@
+
+Five supplied assessment windows are observed; Spring 2023--24 is projected rather than observed. Comparisons of Spring 2022--23 and Spring 2023--24 involve different sixth-grade cohorts, not paired within-student growth.
+
+\textbf{Forecast A:} Historical Winter-to-Spring transition probabilities by placement category, estimated on matched 2022--23 students and applied to 2023--24 Winter assessments. The district projection reported in the summary is 17.1\%.\par
+\textbf{Forecast B:} Logistic regression of Spring Mid/Above on prior Winter scale score, with aggregate estimated projection approximately 17.6\%. Training-set Brier calculations measure in-sample fit and do not constitute held-out validation. A fair held-out comparison of both models, baseline, and calibration remains necessary.
+
+\subsection{Forecast coverage by reporting group}
+<<equity-table, echo=FALSE, results=tex>>=
+if (!is.null(forecast)) {
+  keep <- intersect(c("Equity_Group", "Students", "Students_With_Probability", "Projected_EOY_Pct"), names(forecast))
+  tab <- forecast[,keep,drop=FALSE]
+  names(tab) <- c("Equity group", "Students", "Covered", "Projected (%)")[seq_along(keep)]
+  print(xtable::xtable(tab), include.rownames=FALSE, floating=FALSE)
+} else cat("\\noindent Equity forecast CSV unavailable at compilation.\\par\n")
+@
+
+\section{Near-benchmark opportunity (D10)}
+The working definition uses students in the ``Early On Grade Level'' placement category. This does not establish a fixed numeric distance to the Mid/Above threshold or a causal benefit from additional support.
+
+<<near-table, echo=FALSE, results=tex>>=
+if (!is.null(near)) {
+  cat("\\noindent Near-benchmark school/group output available: ", nrow(near), " aggregate rows.\\par\n", sep="")
+} else cat("\\noindent Near-benchmark output unavailable at compilation.\\par\n")
+@
+
+\section{Quality assurance and disclosure (D11--D12)}
+The most recent recorded quality-check run reported zero failures and two review flags for small school and school-by-equity reporting cells. District-to-school student counts, Mid/Above counts, valid-placement denominators, forecast coverage limits, and percentage ranges passed the defined tests. This log does not rerun those tests; the evidence is the saved pipeline console output. Parsing warnings remain unresolved until the originating input and affected values are identified.
+
+\section{Outstanding actions and decision register}
+\begin{longtable}{p{0.27\linewidth}p{0.43\linewidth}p{0.22\linewidth}}
+\toprule
+Area & Required evidence or follow-up & Current status\\
+\midrule
+\endhead
+Demographic conflicts & Compare all demographic fields within repeated key groups, including missingness & Pending audit\\
+Repeated assessments & Preserve selected/discarded keys and compare alternative selection rules & Pending sensitivity check\\
+Score discrepancy & Attach audit output supporting median 20 and 399 large-discrepancy groups & Reported; verify\\
+CSV parsing & Inspect \texttt{readr::problems()} at source read & Pending\\
+Statistical inference & Confirm test populations, paired design, and school clustering & Pending\\
+Model validation & Held-out Brier, calibration, baseline and uncertainty & Not established\\
+Public release & Apply district-approved small-cell disclosure policy & Review required\\
+\bottomrule
+\end{longtable}
+
+\section{Decision-maker summary}
+The pipeline created a coherent, reconciled set of analytical outputs, but unresolved repeated-assessment authority and limited prediction validation constrain interpretation. The Spring forecast is a planning estimate, not an independently verified outcome or measure of intervention impact. Future analyses should maintain an audit trail of source keys, selected attempts, rejected attempts, versioned decision rules, and supporting QA reports.
+
+\end{document}
